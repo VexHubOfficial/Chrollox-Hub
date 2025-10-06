@@ -1,0 +1,280 @@
+--// 🩸 Chrollox Debug Panel Full Client Version
+-- LocalScript inside StarterPlayerScripts or StarterGui
+
+local player = game.Players.LocalPlayer
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local gui = Instance.new("ScreenGui")
+gui.Name = "ChrolloxPanel"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+--// Toggle Button
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0,130,0,40)
+toggleBtn.Position = UDim2.new(0.05,0,0.5,-20)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(150,0,0)
+toggleBtn.Text = "🩸 Chrollox"
+toggleBtn.TextColor3 = Color3.new(1,1,1)
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 16
+toggleBtn.Active = true
+toggleBtn.Draggable = true
+toggleBtn.Parent = gui
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0,6)
+
+-- Glow animation
+task.spawn(function()
+	while task.wait(1) do
+		local glow = TweenService:Create(toggleBtn,TweenInfo.new(0.8,Enum.EasingStyle.Sine,Enum.EasingDirection.Out),
+			{BackgroundColor3=Color3.fromRGB(255,0,0)})
+		glow:Play()
+		glow.Completed:Wait()
+		local fade = TweenService:Create(toggleBtn,TweenInfo.new(0.8,Enum.EasingStyle.Sine,Enum.EasingDirection.Out),
+			{BackgroundColor3=Color3.fromRGB(150,0,0)})
+		fade:Play()
+	end
+end)
+
+--// Main Panel
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0,300,0,350)
+frame.Position = UDim2.new(0.5,-150,0.5,-175)
+frame.BackgroundColor3 = Color3.fromRGB(40,0,0)
+frame.Visible = false -- hidden by default
+frame.Active = true
+frame.Draggable = true
+frame.Parent = gui
+local frameCorner = Instance.new("UICorner",frame)
+frameCorner.CornerRadius = UDim.new(0,8)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1,0,0,30)
+title.BackgroundTransparency = 1
+title.Text = "🩸 Chrollox Debug Panel"
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 18
+title.TextColor3 = Color3.fromRGB(255,70,70)
+title.Parent = frame
+
+--// Remember panel position
+local lastPos = frame.Position
+frame:GetPropertyChangedSignal("Position"):Connect(function()
+	lastPos = frame.Position
+end)
+
+--// Character setup
+local char = player.Character or player.CharacterAdded:Wait()
+local humanoid = char:WaitForChild("Humanoid")
+
+--// Settings
+local settings = {
+	WalkSpeed = humanoid.WalkSpeed,
+	JumpPower = humanoid.JumpPower,
+	InfiniteJump = false,
+	Noclip = false,
+	ESP = false
+}
+
+--// Slider builder
+local function makeSlider(name,posY,min,max,startValue,onChange)
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1,-20,0,20)
+	label.Position = UDim2.new(0,10,0,posY)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 14
+	label.TextColor3 = Color3.fromRGB(255,255,255)
+	label.Text = name..": "..startValue
+	label.Parent = frame
+
+	local bar = Instance.new("Frame")
+	bar.Size = UDim2.new(0,260,0,6)
+	bar.Position = UDim2.new(0,20,0,posY+25)
+	bar.BackgroundColor3 = Color3.fromRGB(80,0,0)
+	bar.Parent = frame
+	Instance.new("UICorner",bar).CornerRadius = UDim.new(0,4)
+
+	local fill = Instance.new("Frame")
+	fill.Size = UDim2.new((startValue-min)/(max-min),0,1,0)
+	fill.BackgroundColor3 = Color3.fromRGB(255,60,60)
+	fill.Parent = bar
+	Instance.new("UICorner",fill).CornerRadius = UDim.new(0,4)
+
+	local circle = Instance.new("Frame")
+	circle.Size = UDim2.new(0,12,0,12)
+	circle.AnchorPoint = Vector2.new(0.5,0.5)
+	circle.Position = UDim2.new((startValue-min)/(max-min),0,0.5,0)
+	circle.BackgroundColor3 = Color3.fromRGB(255,90,90)
+	circle.Parent = bar
+	local circleCorner = Instance.new("UICorner")
+	circleCorner.CornerRadius = UDim.new(1,0)
+	circleCorner.Parent = circle
+
+	local dragging = false
+	local function update(input)
+		local percent = math.clamp((input.Position.X-bar.AbsolutePosition.X)/bar.AbsoluteSize.X,0,1)
+		fill.Size = UDim2.new(percent,0,1,0)
+		circle.Position = UDim2.new(percent,0,0.5,0)
+		local value = math.floor(min+(max-min)*percent)
+		label.Text = name..": "..value
+		onChange(value)
+	end
+
+	bar.InputBegan:Connect(function(input)
+		if input.UserInputType==Enum.UserInputType.MouseButton1 then
+			dragging=true
+			update(input)
+		end
+	end)
+	bar.InputEnded:Connect(function(input)
+		if input.UserInputType==Enum.UserInputType.MouseButton1 then
+			dragging=false
+		end
+	end)
+	UIS.InputChanged:Connect(function(input)
+		if dragging and input.UserInputType==Enum.UserInputType.MouseMovement then
+			update(input)
+		end
+	end)
+end
+
+--// Sliders
+makeSlider("WalkSpeed",50,8,200,settings.WalkSpeed,function(v)
+	settings.WalkSpeed = v
+	humanoid.WalkSpeed = v
+end)
+
+makeSlider("JumpPower",120,20,250,settings.JumpPower,function(v)
+	settings.JumpPower = v
+	humanoid.JumpPower = v
+end)
+
+--// Infinite Jump
+local infBtn = Instance.new("TextButton")
+infBtn.Size = UDim2.new(0,120,0,30)
+infBtn.Position = UDim2.new(0,30,0,190)
+infBtn.Text = "Infinite Jump: OFF"
+infBtn.BackgroundColor3 = Color3.fromRGB(80,0,0)
+infBtn.TextColor3 = Color3.fromRGB(255,255,255)
+infBtn.Font = Enum.Font.Gotham
+infBtn.TextSize = 14
+infBtn.Parent = frame
+Instance.new("UICorner",infBtn).CornerRadius = UDim.new(0,6)
+
+infBtn.MouseButton1Click:Connect(function()
+	settings.InfiniteJump = not settings.InfiniteJump
+	infBtn.Text = "Infinite Jump: "..(settings.InfiniteJump and "ON" or "OFF")
+	infBtn.BackgroundColor3 = settings.InfiniteJump and Color3.fromRGB(200,0,0) or Color3.fromRGB(80,0,0)
+end)
+
+UIS.JumpRequest:Connect(function()
+	if settings.InfiniteJump then
+		humanoid:ChangeState("Jumping")
+	end
+end)
+
+--// Noclip
+local noclipBtn = Instance.new("TextButton")
+noclipBtn.Size = UDim2.new(0,120,0,30)
+noclipBtn.Position = UDim2.new(0,160,0,190)
+noclipBtn.Text = "Noclip: OFF"
+noclipBtn.BackgroundColor3 = Color3.fromRGB(80,0,0)
+noclipBtn.TextColor3 = Color3.fromRGB(255,255,255)
+noclipBtn.Font = Enum.Font.Gotham
+noclipBtn.TextSize = 14
+noclipBtn.Parent = frame
+Instance.new("UICorner",noclipBtn).CornerRadius = UDim.new(0,6)
+
+noclipBtn.MouseButton1Click:Connect(function()
+	settings.Noclip = not settings.Noclip
+	noclipBtn.Text = "Noclip: "..(settings.Noclip and "ON" or "OFF")
+	noclipBtn.BackgroundColor3 = settings.Noclip and Color3.fromRGB(200,0,0) or Color3.fromRGB(80,0,0)
+end)
+
+RunService.Stepped:Connect(function()
+	if settings.Noclip and char then
+		for _,part in pairs(char:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.CanCollide=false
+			end
+		end
+	end
+end)
+
+--// ESP Toggle
+local espBtn = Instance.new("TextButton")
+espBtn.Size = UDim2.new(0,120,0,30)
+espBtn.Position = UDim2.new(0,30,0,230)
+espBtn.Text = "ESP: OFF"
+espBtn.BackgroundColor3 = Color3.fromRGB(80,0,0)
+espBtn.TextColor3 = Color3.fromRGB(255,255,255)
+espBtn.Font = Enum.Font.Gotham
+espBtn.TextSize = 14
+espBtn.Parent = frame
+Instance.new("UICorner",espBtn).CornerRadius = UDim.new(0,6)
+
+local espBoxes = {}
+espBtn.MouseButton1Click:Connect(function()
+	settings.ESP = not settings.ESP
+	espBtn.Text = "ESP: "..(settings.ESP and "ON" or "OFF")
+	espBtn.BackgroundColor3 = settings.ESP and Color3.fromRGB(200,0,0) or Color3.fromRGB(80,0,0)
+
+		if not settings.ESP then
+		-- remove all existing ESP boxes
+		for _, box in pairs(espBoxes) do
+			if box and box.Parent then
+				box:Destroy()
+			end
+		end
+		espBoxes = {}
+	end
+end)
+
+-- Function to create/update ESP boxes
+local function updateESP()
+	if settings.ESP then
+		for _, p in pairs(Players:GetPlayers()) do
+			if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+				if not espBoxes[p] then
+					-- create a box
+					local box = Instance.new("BoxHandleAdornment")
+					box.Adornee = p.Character:FindFirstChild("HumanoidRootPart")
+					box.AlwaysOnTop = true
+					box.ZIndex = 10
+					box.Size = Vector3.new(2,5,1)
+					box.Color3 = Color3.fromRGB(255,0,0)
+					box.Transparency = 0.5
+					box.Parent = gui
+					espBoxes[p] = box
+				end
+			end
+		end
+	else
+		for _, box in pairs(espBoxes) do
+			if box and box.Parent then
+				box:Destroy()
+			end
+		end
+		espBoxes = {}
+	end
+end
+
+-- Update ESP every frame
+RunService.RenderStepped:Connect(updateESP)
+
+--// Toggle panel visibility
+toggleBtn.MouseButton1Click:Connect(function()
+	frame.Visible = not frame.Visible
+	frame.Position = lastPos -- restore last panel position
+end)
+
+--// Reapply settings on respawn
+player.CharacterAdded:Connect(function(newChar)
+	char = newChar
+	humanoid = newChar:WaitForChild("Humanoid")
+	humanoid.WalkSpeed = settings.WalkSpeed
+	humanoid.JumpPower = settings.JumpPower
+end)
