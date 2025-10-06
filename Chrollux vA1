@@ -1,0 +1,187 @@
+--// 🩸 Chrollox Admin Panel
+--// LocalScript for StarterPlayerScripts or StarterGui
+--// Includes: Draggable Toggle, Speed/JumpPower Sliders, InfiniteJump, Noclip
+
+local player = game.Players.LocalPlayer
+local mouse = player:GetMouse()
+
+--// GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "ChrolloxPanel"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+--// Toggle Button
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 120, 0, 35)
+toggleBtn.Position = UDim2.new(0.05, 0, 0.5, -15)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+toggleBtn.Text = "🩸 Chrollox"
+toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 16
+toggleBtn.Active = true
+toggleBtn.Draggable = true
+toggleBtn.Parent = gui
+
+local cornerBtn = Instance.new("UICorner", toggleBtn)
+cornerBtn.CornerRadius = UDim.new(0, 6)
+
+--// Main Panel
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 260, 0, 260)
+frame.Position = UDim2.new(0.5, -130, 0.5, -130)
+frame.BackgroundColor3 = Color3.fromRGB(40, 0, 0)
+frame.Visible = false
+frame.Active = true
+frame.Draggable = true
+frame.Parent = gui
+
+local corner = Instance.new("UICorner", frame)
+corner.CornerRadius = UDim.new(0, 8)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 30)
+title.BackgroundTransparency = 1
+title.Text = "🩸 Chrollox Admin Panel"
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 18
+title.TextColor3 = Color3.fromRGB(255, 70, 70)
+title.Parent = frame
+
+--// Player References
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+
+local walkSpeed = 16
+local jumpPower = 50
+local infJump = false
+local noclip = false
+
+local UIS = game:GetService("UserInputService")
+
+--// Slider Creation Function
+local function makeSlider(name, yPos, min, max, startValue, callback)
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, -20, 0, 20)
+	label.Position = UDim2.new(0, 10, 0, yPos)
+	label.BackgroundTransparency = 1
+	label.Text = name .. ": " .. startValue
+	label.Font = Enum.Font.Gotham
+	label.TextColor3 = Color3.fromRGB(255, 200, 200)
+	label.TextSize = 14
+	label.Parent = frame
+
+	local bar = Instance.new("Frame")
+	bar.Size = UDim2.new(0, 200, 0, 6)
+	bar.Position = UDim2.new(0, 25, 0, yPos + 25)
+	bar.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
+	bar.Parent = frame
+
+	local fill = Instance.new("Frame")
+	circleCorner.CornerRadius = UDim.new(1, 0)
+	circle.Parent = bar
+
+	local dragging = false
+	local function update(input)
+		local pos = math.clamp((input.Position.X - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1)
+		fill.Size = UDim2.new(pos, 0, 1, 0)
+		circle.Position = UDim2.new(pos, -5, 0, -2)
+		local value = min + (max - min) * pos
+		label.Text = name .. ": " .. math.floor(value)
+		callback(value)
+	end
+
+	bar.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			update(input)
+		end
+	end)
+
+	bar.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = false
+		end
+	end)
+
+	UIS.InputChanged:Connect(function(input)
+		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+			update(input)
+		end
+	end)
+end
+
+--// Sliders
+makeSlider("Speed", 45, 16, 200, 16, function(v)
+	walkSpeed = v
+	humanoid.WalkSpeed = v
+end)
+
+makeSlider("JumpPower", 105, 50, 300, 50, function(v)
+	jumpPower = v
+	humanoid.JumpPower = v
+end)
+
+--// Infinite Jump Button
+local infBtn = Instance.new("TextButton")
+infBtn.Size = UDim2.new(0, 110, 0, 35)
+infBtn.Position = UDim2.new(0, 20, 0, 170)
+infBtn.Text = "Infinite Jump: OFF"
+infBtn.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
+infBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+infBtn.Font = Enum.Font.GothamBold
+infBtn.TextSize = 14
+infBtn.Parent = frame
+
+local infCorner = Instance.new("UICorner", infBtn)
+infCorner.CornerRadius = UDim.new(0, 6)
+
+--// Noclip Button
+local noclipBtn = infBtn:Clone()
+noclipBtn.Position = UDim2.new(0, 135, 0, 170)
+noclipBtn.Text = "Noclip: OFF"
+noclipBtn.Parent = frame
+
+--// Infinite Jump Functionality
+UIS.JumpRequest:Connect(function()
+	if infJump then
+		humanoid:ChangeState("Jumping")
+	end
+end)
+
+infBtn.MouseButton1Click:Connect(function()
+	infJump = not infJump
+	infBtn.Text = "Infinite Jump: " .. (infJump and "ON" or "OFF")
+	infBtn.BackgroundColor3 = infJump and Color3.fromRGB(200, 0, 0) or Color3.fromRGB(80, 0, 0)
+end)
+
+--// Noclip Functionality
+noclipBtn.MouseButton1Click:Connect(function()
+	noclip = not noclip
+	noclipBtn.Text = "Noclip: " .. (noclip and "ON" or "OFF")
+	noclipBtn.BackgroundColor3 = noclip and Color3.fromRGB(200, 0, 0) or Color3.fromRGB(80, 0, 0)
+end)
+
+game:GetService("RunService").Stepped:Connect(function()
+	if noclip and character then
+		for _, v in pairs(character:GetDescendants()) do
+			if v:IsA("BasePart") then
+				v.CanCollide = false
+			end
+		end
+	end
+end)
+
+--// Toggle Button (Show/Hide Panel)
+toggleBtn.MouseButton1Click:Connect(function()
+	frame.Visible = not frame.Visible
+end)
+
+--// Character respawn handler
+player.CharacterAdded:Connect(function(char)
+	character = char
+	humanoid = char:WaitForChild("Humanoid")
+	humanoid.WalkSpeed = walkSpeed
+	humanoid.JumpPower = jumpPower
+end)
