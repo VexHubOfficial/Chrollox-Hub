@@ -1,0 +1,272 @@
+--// LocalScript inside StarterGui
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+-- Create ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "Chrollox"
+screenGui.Parent = playerGui
+
+-- Helper to create rounded frames
+local function createFrame(parent, size, pos, color, radius)
+    local frame = Instance.new("Frame")
+    frame.Size = size
+    frame.Position = pos
+    frame.BackgroundColor3 = color
+    frame.BorderSizePixel = 0
+    frame.Parent = parent
+
+    local uicorner = Instance.new("UICorner")
+    uicorner.CornerRadius = UDim.new(0, radius or 10)
+    uicorner.Parent = frame
+    return frame
+end
+
+-- Main Panel
+local mainFrame = createFrame(screenGui, UDim2.new(0, 320, 0, 380), UDim2.new(0.5, -160, 0.5, -190), Color3.fromRGB(50,0,0), 12)
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Visible = false
+mainFrame.ClipsDescendants = true
+
+-- Smooth open/close tween
+local function togglePanel()
+    local goal = {}
+    if mainFrame.Visible then
+        mainFrame.Visible = true
+        goal.Position = mainFrame.Position
+        TweenService:Create(mainFrame, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {Size = UDim2.new(0,0,0,0)}):Play()
+        task.delay(0.2, function() mainFrame.Visible = false mainFrame.Size = UDim2.new(0,320,0,380) end)
+    else
+        mainFrame.Size = UDim2.new(0,0,0,0)
+        mainFrame.Visible = true
+        TweenService:Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {Size = UDim2.new(0,320,0,380)}):Play()
+    end
+end
+
+-- Title
+local title = Instance.new("TextLabel")
+title.Text = "Chrollox"
+title.Size = UDim2.new(1,0,0,35)
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.fromRGB(255,120,120)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 22
+title.Parent = mainFrame
+
+-- Tabs
+local tabFrame = createFrame(mainFrame, UDim2.new(1, -20, 0, 35), UDim2.new(0,10,0,45), Color3.fromRGB(35,0,0), 8)
+local speedTab = Instance.new("TextButton")
+speedTab.Text = "Main"
+speedTab.Size = UDim2.new(0.5,0,1,0)
+speedTab.Position = UDim2.new(0,0,0,0)
+speedTab.BackgroundTransparency = 1
+speedTab.TextColor3 = Color3.fromRGB(255,150,150)
+speedTab.Font = Enum.Font.GothamBold
+speedTab.TextSize = 16
+speedTab.Parent = tabFrame
+
+local emotesTab = Instance.new("TextButton")
+emotesTab.Text = "Emotes"
+emotesTab.Size = UDim2.new(0.5,0,1,0)
+emotesTab.Position = UDim2.new(0.5,0,0,0)
+emotesTab.BackgroundTransparency = 1
+emotesTab.TextColor3 = Color3.fromRGB(255,150,150)
+emotesTab.Font = Enum.Font.GothamBold
+emotesTab.TextSize = 16
+emotesTab.Parent = tabFrame
+
+-- Content Frames
+local contentMain = createFrame(mainFrame, UDim2.new(1, -20, 1, -100), UDim2.new(0,10,0,85), Color3.fromRGB(35,0,0), 8)
+local contentEmotes = createFrame(mainFrame, UDim2.new(1, -20, 1, -100), UDim2.new(0,10,0,85), Color3.fromRGB(35,0,0), 8)
+contentEmotes.Visible = false
+
+-- Hover effect function
+local function addHover(button, color1, color2)
+    button.MouseEnter:Connect(function()
+        TweenService:Create(button, TweenInfo.new(0.15), {BackgroundColor3 = color2}):Play()
+    end)
+    button.MouseLeave:Connect(function()
+        TweenService:Create(button, TweenInfo.new(0.15), {BackgroundColor3 = color1}):Play()
+    end)
+end
+
+-- Slider Function
+local function createSlider(parent, name, min, max, default, yPos)
+    local frame = createFrame(parent, UDim2.new(1, -20, 0, 50), UDim2.new(0,10,0,yPos), Color3.fromRGB(60,0,0),6)
+    local label = Instance.new("TextLabel")
+    label.Text = name..": "..default
+    label.Size = UDim2.new(1,0,0,20)
+    label.BackgroundTransparency = 1
+    label.TextColor3 = Color3.fromRGB(255,150,150)
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 16
+    label.Parent = frame
+
+    local slider = createFrame(frame, UDim2.new(default/max,0,0,20), UDim2.new(0,0,0,25), Color3.fromRGB(200,0,0),4)
+    addHover(slider, Color3.fromRGB(200,0,0), Color3.fromRGB(255,50,50))
+
+    local dragging = false
+    local function update(input)
+        local pos = input.Position.X - slider.AbsolutePosition.X
+        local size = math.clamp(pos / slider.AbsoluteSize.X, 0, 1)
+        TweenService:Create(slider, TweenInfo.new(0.05), {Size = UDim2.new(size,0,0,20)}):Play()
+        local value = math.floor(min + (max-min)*size)
+        label.Text = name..": "..value
+        return value
+    end
+
+    slider.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end
+    end)
+    slider.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local value = update(input)
+            if name == "Speed" then
+                player.Character.Humanoid.WalkSpeed = value
+            elseif name == "JumpPower" then
+                player.Character.Humanoid.JumpPower = value
+            end
+        end
+    end)
+end
+
+-- Create Sliders
+createSlider(contentMain, "Speed",16,500,16,10)
+createSlider(contentMain, "JumpPower",50,500,50,70)
+
+-- Highlight Button
+local highlightEnabled = false
+local highlightButton = Instance.new("TextButton")
+highlightButton.Text = "Toggle Player Highlights"
+highlightButton.Size = UDim2.new(1, -20, 0, 35)
+highlightButton.Position = UDim2.new(0,10,0,140)
+highlightButton.BackgroundColor3 = Color3.fromRGB(180,0,0)
+highlightButton.TextColor3 = Color3.fromRGB(255,200,200)
+highlightButton.Font = Enum.Font.GothamBold
+highlightButton.TextSize = 16
+highlightButton.Parent = contentMain
+addHover(highlightButton, Color3.fromRGB(180,0,0), Color3.fromRGB(255,50,50))
+
+-- Infinite Jump Button
+local infiniteJumpEnabled = false
+local infiniteJumpButton = Instance.new("TextButton")
+infiniteJumpButton.Text = "Toggle Infinite Jump"
+infiniteJumpButton.Size = UDim2.new(1, -20, 0, 35)
+infiniteJumpButton.Position = UDim2.new(0,10,0,190)
+infiniteJumpButton.BackgroundColor3 = Color3.fromRGB(180,0,0)
+infiniteJumpButton.TextColor3 = Color3.fromRGB(255,200,200)
+infiniteJumpButton.Font = Enum.Font.GothamBold
+infiniteJumpButton.TextSize = 16
+infiniteJumpButton.Parent = contentMain
+addHover(infiniteJumpButton, Color3.fromRGB(180,0,0), Color3.fromRGB(255,50,50))
+
+-- Highlight logic (team color)
+local function updateHighlights()
+    for _, plr in pairs(game.Players:GetPlayers()) do
+        if plr ~= player then
+            local char = plr.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local hl = char:FindFirstChildWhichIsA("Highlight")
+                if highlightEnabled then
+                    if not hl then
+                        hl = Instance.new("Highlight")
+                        hl.Adornee = char
+                        hl.Parent = char
+                        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                    end
+                    if plr.Team and plr.TeamColor then
+                        hl.FillColor = plr.TeamColor.Color
+                        hl.OutlineColor = plr.TeamColor.Color:lerp(Color3.new(1,1,1),0.5)
+                    else
+                        hl.FillColor = Color3.fromRGB(255,0,0)
+                        hl.OutlineColor = Color3.fromRGB(255,150,150)
+                    end
+                else
+                    if hl then hl:Destroy() end
+                end
+            end
+        end
+    end
+end
+highlightButton.MouseButton1Click:Connect(function()
+    highlightEnabled = not highlightEnabled
+    updateHighlights()
+end)
+
+-- Infinite jump logic
+UserInputService.JumpRequest:Connect(function()
+    if infiniteJumpEnabled then
+        local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)
+infiniteJumpButton.MouseButton1Click:Connect(function()
+    infiniteJumpEnabled = not infiniteJumpEnabled
+end)
+
+-- Emotes Tab (example)
+local contentEmotes = createFrame(mainFrame, UDim2.new(1, -20, 1, -100), UDim2.new(0,10,0,85), Color3.fromRGB(35,0,0), 8)
+contentEmotes.Visible = false
+local emotes = {"Wave","Dance","Laugh","Point"}
+for i, em in ipairs(emotes) do
+    local btn = Instance.new("TextButton")
+    btn.Text = em
+    btn.Size = UDim2.new(0.45,0,0,35)
+    btn.Position = UDim2.new(((i-1)%2)*0.5 + 0.025,0,math.floor((i-1)/2)*0.1,10)
+    btn.BackgroundColor3 = Color3.fromRGB(180,0,0)
+    btn.TextColor3 = Color3.fromRGB(255,200,200)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 16
+    btn.Parent = contentEmotes
+    addHover(btn, Color3.fromRGB(180,0,0), Color3.fromRGB(255,50,50))
+    btn.MouseButton1Click:Connect(function()
+        local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid:LoadAnimation(Instance.new("Animation", humanoid){AnimationId = "rbxassetid://0"}) -- replace with actual emote asset ID
+        end
+    end)
+end
+
+-- Tab switching
+speedTab.MouseButton1Click:Connect(function()
+    contentMain.Visible = true
+    contentEmotes.Visible = false
+end)
+emotesTab.MouseButton1Click:Connect(function()
+    contentMain.Visible = false
+    contentEmotes.Visible = true
+end)
+
+-- Draggable toggle button
+local toggleButton = createFrame(screenGui, UDim2.new(0,100,0,40), UDim2.new(0,50,0,50), Color3.fromRGB(200,0,0),10)
+local toggleLabel = Instance.new("TextLabel")
+toggleLabel.Text = "Chrollox"
+toggleLabel.Size = UDim2.new(1,0,1,0)
+toggleLabel.BackgroundTransparency = 1
+toggleLabel.TextColor3 = Color3.fromRGB(255,150,150)
+toggleLabel.Font = Enum.Font.GothamBold
+toggleLabel.TextSize = 18
+toggleLabel.Parent = toggleButton
+
+local draggingToggle = false
+toggleButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingToggle = true end
+end)
+toggleButton.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingToggle = false end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if draggingToggle and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local mousePos = UserInputService:GetMouseLocation()
+        toggleButton.Position = UDim2.new(0, mousePos.X - toggleButton.Size.X.Offset/2, 0, mousePos.Y - toggleButton.Size.Y.Offset/2)
+    end
+end)
+toggleButton.MouseButton1Click:Connect(togglePanel)
