@@ -1,0 +1,309 @@
+--// Chrollux Hub - By Vex
+--// Place this LocalScript inside StarterPlayerScripts or ScreenGui in StarterGui
+
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+
+----------------------------------------------------
+--// SCREEN GUI
+----------------------------------------------------
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ChrolluxHub"
+screenGui.Parent = player:WaitForChild("PlayerGui")
+screenGui.ResetOnSpawn = false
+
+----------------------------------------------------
+--// FLOATING TOGGLE BUTTON
+----------------------------------------------------
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 50, 0, 50)
+toggleBtn.Position = UDim2.new(0.05, 0, 0.5, 0)
+toggleBtn.Text = "🔥"
+toggleBtn.TextSize = 26
+toggleBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+toggleBtn.BorderSizePixel = 0
+toggleBtn.AutoButtonColor = false
+toggleBtn.Parent = screenGui
+
+local draggingButton = false
+local dragInput, mousePos, btnPos
+
+local function updateButton(input)
+	local delta = input.Position - mousePos
+	toggleBtn.Position = UDim2.new(
+		btnPos.X.Scale,
+		btnPos.X.Offset + delta.X,
+		btnPos.Y.Scale,
+		btnPos.Y.Offset + delta.Y
+	)
+end
+
+toggleBtn.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+		draggingButton = true
+		mousePos = input.Position
+		btnPos = toggleBtn.Position
+
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				draggingButton = false
+			end
+		end)
+	end
+end)
+
+toggleBtn.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement then
+		dragInput = input
+	end
+end)
+
+UIS.InputChanged:Connect(function(input)
+	if input == dragInput and draggingButton then
+		updateButton(input)
+	end
+end)
+
+----------------------------------------------------
+--// MAIN PANEL
+----------------------------------------------------
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 250, 0, 260)
+frame.Position = UDim2.new(0.5, -125, 0.3, 0)
+frame.BackgroundColor3 = Color3.fromRGB(50, 0, 0)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+frame.Visible = false
+frame.Parent = screenGui
+
+toggleBtn.MouseButton1Click:Connect(function()
+	frame.Visible = not frame.Visible
+end)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 30)
+title.BackgroundColor3 = Color3.fromRGB(90, 0, 0)
+title.Text = "🔥 Chrollux Hub"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.Parent = frame
+
+local credits = Instance.new("TextLabel")
+credits.Size = UDim2.new(1, 0, 0, 20)
+credits.Position = UDim2.new(0, 0, 1, -20)
+credits.BackgroundTransparency = 1
+credits.Text = "By Vex"
+credits.TextColor3 = Color3.new(1, 0.5, 0.5)
+credits.Font = Enum.Font.Gotham
+credits.TextSize = 14
+credits.Parent = frame
+
+----------------------------------------------------
+--// SLIDER CREATION FUNCTION
+----------------------------------------------------
+local function createSlider(name, yPos, maxValue, defaultValue, callback)
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, 0, 0, 20)
+	label.Position = UDim2.new(0, 0, 0, yPos)
+	label.BackgroundTransparency = 1
+	label.Text = name .. ": " .. defaultValue
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.Font = Enum.Font.Gotham
+	label.TextSize = 14
+	label.Parent = frame
+
+	local slider = Instance.new("TextButton")
+	slider.Size = UDim2.new(1, -20, 0, 10)
+	slider.Position = UDim2.new(0, 10, 0, yPos + 25)
+	slider.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
+	slider.AutoButtonColor = false
+	slider.Text = ""
+	slider.Parent = frame
+
+	local fill = Instance.new("Frame")
+	fill.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+	fill.Size = UDim2.new(0, 0, 1, 0)
+	fill.Parent = slider
+
+	local dragging = false
+
+	slider.MouseButton1Down:Connect(function()
+		dragging = true
+	end)
+
+	UIS.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
+
+	UIS.InputChanged:Connect(function(input)
+		if dragging then
+			local rel = math.clamp((input.Position.X - slider.AbsolutePosition.X) / slider.AbsoluteSize.X, 0, 1)
+			fill.Size = UDim2.new(rel, 0, 1, 0)
+			local val = math.floor(rel * maxValue)
+			label.Text = name .. ": " .. val
+			callback(val)
+		end
+	end)
+end
+
+----------------------------------------------------
+--// SPEED SLIDER
+----------------------------------------------------
+createSlider("Speed", 40, 100, 16, function(val)
+	humanoid.WalkSpeed = val
+end)
+
+----------------------------------------------------
+--// JUMP SLIDER
+----------------------------------------------------
+createSlider("Jump", 90, 200, 50, function(val)
+	humanoid.JumpPower = val
+end)
+
+----------------------------------------------------
+--// TOGGLE CREATION FUNCTION
+----------------------------------------------------
+local function createToggle(name, posY, callback)
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(0.8, 0, 0, 25)
+	label.Position = UDim2.new(0, 10, 0, posY)
+	label.BackgroundTransparency = 1
+	label.Text = name
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.Font = Enum.Font.Gotham
+	label.TextSize = 14
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Parent = frame
+
+	local button = Instance.new("TextButton")
+	button.Size = UDim2.new(0, 25, 0, 25)
+	button.Position = UDim2.new(1, -35, 0, posY)
+	button.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
+	button.Text = "❌"
+	button.Font = Enum.Font.GothamBold
+	button.TextSize = 16
+	button.TextColor3 = Color3.new(1, 1, 1)
+	button.Parent = frame
+
+	local state = false
+	button.MouseButton1Click:Connect(function()
+		state = not state
+		if state then
+			button.Text = "✅"
+			button.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+		else
+			button.Text = "❌"
+			button.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
+		end
+		callback(state)
+	end)
+
+	return button
+end
+
+----------------------------------------------------
+--// INFINITE JUMP
+----------------------------------------------------
+local infJumpEnabled = false
+createToggle("Infinite Jump", 145, function(state)
+	infJumpEnabled = state
+end)
+
+UIS.JumpRequest:Connect(function()
+	if infJumpEnabled then
+		humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+	end
+end)
+
+----------------------------------------------------
+--// NOCLIP
+----------------------------------------------------
+local noclipEnabled = false
+createToggle("Noclip", 175, function(state)
+	noclipEnabled = state
+end)
+
+RunService.Stepped:Connect(function()
+	if noclipEnabled and character then
+		for _, part in pairs(character:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.CanCollide = false
+			end
+		end
+	end
+end)
+
+----------------------------------------------------
+--// PLAYER HIGHLIGHT (ESP)
+----------------------------------------------------
+local espEnabled = false
+createToggle("Player ESP", 205, function(state)
+	espEnabled = state
+	if not espEnabled then
+		for _, plr in pairs(Players:GetPlayers()) do
+			if plr.Character and plr.Character:FindFirstChild("ESP_Highlight") then
+				plr.Character.ESP_Highlight:Destroy()
+			end
+			if plr.Character and plr.Character:FindFirstChild("ESP_Billboard") then
+				plr.Character.ESP_Billboard:Destroy()
+			end
+		end
+	end
+end)
+
+local function addESP(plr)
+	if plr == player then return end
+	plr.CharacterAdded:Connect(function(char)
+		char:WaitForChild("Humanoid")
+
+		-- Highlight outline
+		local highlight = Instance.new("Highlight")
+		highlight.Name = "ESP_Highlight"
+		highlight.FillTransparency = 1
+		highlight.OutlineColor = Color3.fromRGB(255, 0, 0)
+		highlight.OutlineTransparency = 0
+		highlight.Parent = char
+
+		-- Billboard
+		local billboard = Instance.new("BillboardGui")
+		billboard.Name = "ESP_Billboard"
+		billboard.Adornee = char:WaitForChild("HumanoidRootPart")
+		billboard.Size = UDim2.new(0, 200, 0, 50)
+		billboard.AlwaysOnTop = true
+		billboard.Parent = char
+
+		local text = Instance.new("TextLabel")
+		text.BackgroundTransparency = 1
+		text.Size = UDim2.new(1, 0, 1, 0)
+		text.TextColor3 = Color3.new(1, 0, 0)
+		text.TextStrokeTransparency = 0
+		text.Font = Enum.Font.GothamBold
+		text.TextScaled = true
+		text.Parent = billboard
+
+		local humanoid = char:FindFirstChildOfClass("Humanoid")
+		RunService.RenderStepped:Connect(function()
+			if espEnabled and humanoid then
+				text.Text = string.format("%s | %d HP", plr.DisplayName, math.floor(humanoid.Health))
+			else
+				text.Text = ""
+			end
+		end)
+	end)
+end
+
+for _, plr in pairs(Players:GetPlayers()) do
+	addESP(plr)
+end
+
+Players.PlayerAdded:Connect(addESP)
