@@ -1,5 +1,5 @@
 --// Chrollux Hub - By Vex
---// Place this LocalScript inside StarterPlayerScripts or ScreenGui in StarterGui
+--// LocalScript | Place in StarterPlayerScripts or StarterGui
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -10,7 +10,7 @@ local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 
 ----------------------------------------------------
---// SCREEN GUI
+-- GUI SETUP
 ----------------------------------------------------
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "ChrolluxHub"
@@ -18,7 +18,7 @@ screenGui.Parent = player:WaitForChild("PlayerGui")
 screenGui.ResetOnSpawn = false
 
 ----------------------------------------------------
---// FLOATING TOGGLE BUTTON
+-- FLOATING TOGGLE BUTTON
 ----------------------------------------------------
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0, 50, 0, 50)
@@ -71,7 +71,7 @@ UIS.InputChanged:Connect(function(input)
 end)
 
 ----------------------------------------------------
---// MAIN PANEL
+-- MAIN PANEL
 ----------------------------------------------------
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 250, 0, 260)
@@ -107,71 +107,86 @@ credits.TextSize = 14
 credits.Parent = frame
 
 ----------------------------------------------------
---// SLIDER CREATION FUNCTION
+-- VALUE CONTROL CREATOR (WITH HOLD FUNCTION)
 ----------------------------------------------------
-local function createSlider(name, yPos, maxValue, defaultValue, callback)
+local function createValueControl(labelText, yPos, startValue, step, onChange)
+	local value = startValue
+
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, 0, 0, 20)
-	label.Position = UDim2.new(0, 0, 0, yPos)
+	label.Size = UDim2.new(0.6, 0, 0, 25)
+	label.Position = UDim2.new(0, 10, 0, yPos)
 	label.BackgroundTransparency = 1
-	label.Text = name .. ": " .. defaultValue
+	label.Text = labelText .. ": " .. value
 	label.TextColor3 = Color3.new(1, 1, 1)
 	label.Font = Enum.Font.Gotham
 	label.TextSize = 14
+	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.Parent = frame
 
-	local slider = Instance.new("TextButton")
-	slider.Size = UDim2.new(1, -20, 0, 10)
-	slider.Position = UDim2.new(0, 10, 0, yPos + 25)
-	slider.BackgroundColor3 = Color3.fromRGB(100, 0, 0)
-	slider.AutoButtonColor = false
-	slider.Text = ""
-	slider.Parent = frame
+	local plus = Instance.new("TextButton")
+	plus.Size = UDim2.new(0, 30, 0, 25)
+	plus.Position = UDim2.new(0.8, 0, 0, yPos)
+	plus.Text = "+"
+	plus.TextColor3 = Color3.new(1, 1, 1)
+	plus.Font = Enum.Font.GothamBold
+	plus.TextSize = 18
+	plus.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+	plus.Parent = frame
 
-	local fill = Instance.new("Frame")
-	fill.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-	fill.Size = UDim2.new(0, 0, 1, 0)
-	fill.Parent = slider
+	local minus = Instance.new("TextButton")
+	minus.Size = UDim2.new(0, 30, 0, 25)
+	minus.Position = UDim2.new(0.8, -35, 0, yPos)
+	minus.Text = "-"
+	minus.TextColor3 = Color3.new(1, 1, 1)
+	minus.Font = Enum.Font.GothamBold
+	minus.TextSize = 18
+	minus.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+	minus.Parent = frame
 
-	local dragging = false
+	local holding = false
 
-	slider.MouseButton1Down:Connect(function()
-		dragging = true
-	end)
+	local function updateValue(newVal)
+		value = newVal
+		label.Text = labelText .. ": " .. value
+		onChange(value)
+	end
 
-	UIS.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			dragging = false
-		end
-	end)
+	local function holdButton(button, delta)
+		button.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+				holding = true
+				while holding do
+					updateValue(math.max(0, value + delta))
+					task.wait(0.1)
+				end
+			end
+		end)
+		button.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+				holding = false
+			end
+		end)
+	end
 
-	UIS.InputChanged:Connect(function(input)
-		if dragging then
-			local rel = math.clamp((input.Position.X - slider.AbsolutePosition.X) / slider.AbsoluteSize.X, 0, 1)
-			fill.Size = UDim2.new(rel, 0, 1, 0)
-			local val = math.floor(rel * maxValue)
-			label.Text = name .. ": " .. val
-			callback(val)
-		end
-	end)
+	holdButton(plus, step)
+	holdButton(minus, -step)
+
+	return updateValue
 end
 
 ----------------------------------------------------
---// SPEED SLIDER
+-- SPEED & JUMP CONTROLS
 ----------------------------------------------------
-createSlider("Speed", 40, 100, 16, function(val)
+createValueControl("Speed", 40, 16, 2, function(val)
 	humanoid.WalkSpeed = val
 end)
 
-----------------------------------------------------
---// JUMP SLIDER
-----------------------------------------------------
-createSlider("Jump", 90, 200, 50, function(val)
+createValueControl("Jump", 80, 50, 2, function(val)
 	humanoid.JumpPower = val
 end)
 
 ----------------------------------------------------
---// TOGGLE CREATION FUNCTION
+-- TOGGLE CREATOR
 ----------------------------------------------------
 local function createToggle(name, posY, callback)
 	local label = Instance.new("TextLabel")
@@ -207,15 +222,14 @@ local function createToggle(name, posY, callback)
 		end
 		callback(state)
 	end)
-
 	return button
 end
 
 ----------------------------------------------------
---// INFINITE JUMP
+-- INFINITE JUMP
 ----------------------------------------------------
 local infJumpEnabled = false
-createToggle("Infinite Jump", 145, function(state)
+createToggle("Infinite Jump", 120, function(state)
 	infJumpEnabled = state
 end)
 
@@ -226,10 +240,10 @@ UIS.JumpRequest:Connect(function()
 end)
 
 ----------------------------------------------------
---// NOCLIP
+-- NOCLIP
 ----------------------------------------------------
 local noclipEnabled = false
-createToggle("Noclip", 175, function(state)
+createToggle("Noclip", 150, function(state)
 	noclipEnabled = state
 end)
 
@@ -244,10 +258,10 @@ RunService.Stepped:Connect(function()
 end)
 
 ----------------------------------------------------
---// PLAYER HIGHLIGHT (ESP)
+-- ESP
 ----------------------------------------------------
 local espEnabled = false
-createToggle("Player ESP", 205, function(state)
+createToggle("Player ESP", 180, function(state)
 	espEnabled = state
 	if not espEnabled then
 		for _, plr in pairs(Players:GetPlayers()) do
@@ -266,7 +280,6 @@ local function addESP(plr)
 	plr.CharacterAdded:Connect(function(char)
 		char:WaitForChild("Humanoid")
 
-		-- Highlight outline
 		local highlight = Instance.new("Highlight")
 		highlight.Name = "ESP_Highlight"
 		highlight.FillTransparency = 1
@@ -274,7 +287,6 @@ local function addESP(plr)
 		highlight.OutlineTransparency = 0
 		highlight.Parent = char
 
-		-- Billboard
 		local billboard = Instance.new("BillboardGui")
 		billboard.Name = "ESP_Billboard"
 		billboard.Adornee = char:WaitForChild("HumanoidRootPart")
