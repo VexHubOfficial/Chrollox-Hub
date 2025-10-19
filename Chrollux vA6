@@ -1,5 +1,4 @@
---// Chrollux Hub - By Vex
---// LocalScript | Place in StarterPlayerScripts or StarterGui
+--// Chrollux Hub - By Vex Dev & Creator
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
